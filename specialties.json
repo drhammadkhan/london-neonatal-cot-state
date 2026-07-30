@@ -1,12 +1,12 @@
 {
-  "_comment": "Specialist services per unit, derived from hospitals_refined.csv. Keys match the unit short name (Cotstate column C / geo.json). Only tertiary units with surgical/specialist services are listed; any unit not here has no specialty tags. Care level (NICU/LNU/SCBU) already comes from the cot-state sheet and drives the Level filter. Categories: Surgery, Neuro (neuro/neurosurgery), Cardiac, ENT.",
+  "_comment": "Specialist services per unit, derived from hospitals_refined.csv (+ clinician corrections). Keys match the unit short name (Cotstate column C / geo.json). Only units with tertiary/specialist services are listed; any unit not here has no specialty tags. Care level (NICU/LNU/SCBU) already comes from the cot-state sheet and drives the Level filter. Categories: Surgery, Neuro (neurology), Neurosurgery, Cardiac, ENT.",
 
-  "Great Ormond Street": ["Surgery", "Cardiac", "ENT", "Neuro"],
+  "Great Ormond Street": ["Surgery", "Cardiac", "ENT", "Neuro", "Neurosurgery"],
   "University College Hospital": ["Neuro"],
   "The Royal London": ["Surgery"],
   "Chelsea & Westminster": ["Surgery", "ENT"],
   "Queen Charlotte's": ["Neuro"],
   "Evelina (St Thomas')": ["Surgery", "Cardiac", "ENT", "Neuro"],
-  "St George's": ["Surgery", "Neuro", "ENT"],
-  "Kings College": ["Surgery", "Neuro"]
+  "St George's": ["Surgery", "Neurosurgery", "ENT"],
+  "Kings College": ["Surgery", "Neurosurgery"]
 }
