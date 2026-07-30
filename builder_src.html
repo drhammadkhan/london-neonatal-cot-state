@@ -102,14 +102,15 @@ h1{font-family:var(--serif);font-weight:600;font-size:28px;letter-spacing:-.02em
     <div><h1>Cot State Builder</h1><div class="sub">London Neonatal Network</div></div>
   </div>
   <p class="lead">Drop the daily <b>Cot State</b> spreadsheet below to build the interactive map dashboard.
+  Drop <b>several days at once</b> to add a trend view (a date slider and availability sparklines).
   Everything runs on this page — <b>no internet, no install, no Terminal</b> — so it works the same on Mac or Windows.
   You'll get a single <b>.html</b> file to send.</p>
 
   <label class="drop" id="drop" for="file">
     <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 15V3m0 0-4 4m4-4 4 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 15v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4" stroke-linecap="round"/></svg></div>
     <div class="big">Drop the Cot State <span style="color:var(--accent)">.xlsx</span> here</div>
-    <div class="small">or <b>click to choose a file</b> · stays entirely on your computer</div>
-    <input type="file" id="file" accept=".xlsx,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+    <div class="small">one day, or <b>several for a trend</b> · click to choose · stays on your computer</div>
+    <input type="file" id="file" multiple accept=".xlsx,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
   </label>
 
   <div class="err" id="err"></div>
@@ -125,7 +126,7 @@ h1{font-family:var(--serif);font-weight:600;font-size:28px;letter-spacing:-.02em
       <div class="warns" id="warns" style="display:none"></div>
       <div class="actions">
         <button class="btn primary" id="download"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0-4-4m4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke-linecap="round"/></svg>Download dashboard</button>
-        <button class="btn ghost" id="another">Choose another file</button>
+        <button class="btn ghost" id="another">Choose other files</button>
         <span class="hint" id="dlname"></span>
       </div>
       <div class="preview">
@@ -219,7 +220,7 @@ function extract(wb){
       ichdTotal:ictot,ichdAvail:icav,scFunded:sctot,scAvail:scav,
       overall:clean(row[16]),overallPct:toFloat(row[17])||0,rag:clean(row[19]),
       admissions:toInt(row[21]),discharges:toInt(row[22]),comment:clean(row[24]),
-      funded:fn!=null?fn:toInt(row[26]),available:av!=null?av:toInt(row[27])};
+      funded:fn!=null?fn:toInt(row[26]),available:av};  // available only from reported overall; null = not submitted (stale)
     units.push(u); buffer.push(u);
   }
 
@@ -243,32 +244,57 @@ let builtHtml=null, outName='London Neonatal Cot State.html';
 function showErr(msg){ const e=$('#err'); e.textContent='⚠  '+msg; e.classList.add('show'); $('#result').classList.remove('show'); }
 function clearErr(){ $('#err').classList.remove('show'); }
 
-function handleFile(file){
-  clearErr();
-  if(!file) return;
-  if(!/\.xls[xm]$/i.test(file.name)){ showErr('Please choose an Excel .xlsx file.'); return; }
-  const reader=new FileReader();
-  reader.onload=e=>{
-    try{
-      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
-      const {data,warnings}=extract(wb);
-      render(file.name,data,warnings);
-    }catch(err){ showErr(err.message||String(err)); console.error(err); }
-  };
-  reader.onerror=()=>showErr('Could not read that file.');
-  reader.readAsArrayBuffer(file);
+/* ---- multi-day assembly (mirrors generate.py build_payload) ---- */
+const _months={january:0,february:1,march:2,april:3,may:4,june:5,july:6,august:7,september:8,october:9,november:10,december:11};
+const _STATIC=['full','short','level','net','netAbbr','lat','lng'];
+const _DYN=['status','ichdTotal','ichdAvail','scFunded','scAvail','overall','overallPct','rag','admissions','discharges','comment','funded','available'];
+function bShortDay(s){const p=(s||'').split(' ');return p.length>=3?`${p[1]} ${p[2].slice(0,3)}`:s;}
+function dateKey(entry){                          // sort by report date; filename first, then meta
+  const m=(entry.name||'').match(/(\d{2})\.(\d{2})\.(\d{4})/);
+  if(m) return new Date(+m[3],+m[2]-1,+m[1]).getTime();
+  const p=(entry.data.meta.date||'').split(' ');
+  if(p.length>=4 && _months[(p[2]||'').toLowerCase()]!=null) return new Date(+p[3],_months[p[2].toLowerCase()],+p[1]).getTime();
+  return 0;
+}
+function buildFrames(entries){
+  entries.sort((a,b)=>dateKey(a)-dateKey(b));      // oldest → newest
+  const frames=entries.map(e=>e.data), latest=frames[frames.length-1];
+  const staticUnits=latest.units.map(u=>{const o={};_STATIC.forEach(k=>o[k]=u[k]);return o;});
+  const frameOut=frames.map(fr=>{
+    const um={}; fr.units.forEach(u=>{const o={};_DYN.forEach(k=>o[k]=u[k]);um[u.short]=o;});
+    return {date:fr.meta.date,time:fr.meta.time,london:fr.london,units:um};
+  });
+  return {meta:latest.meta,networks:latest.networks,london:latest.london,units:staticUnits,frames:frameOut};
 }
 
-function render(fname,data,warnings){
+async function handleFiles(fileList){
+  clearErr();
+  const files=[...fileList].filter(f=>/\.xls[xm]$/i.test(f.name));
+  if(!files.length){ showErr('Please choose one or more Cot State .xlsx files.'); return; }
+  try{
+    const entries=[];
+    for(const f of files){
+      const buf=await f.arrayBuffer();
+      const wb=XLSX.read(new Uint8Array(buf),{type:'array'});
+      const {data,warnings}=extract(wb);
+      entries.push({name:f.name,data,warnings});
+    }
+    render(buildFrames(entries), [...new Set(entries.flatMap(e=>e.warnings))]);
+  }catch(err){ showErr(err.message||String(err)); console.error(err); }
+}
+
+function render(data,warnings){
   const payload=JSON.stringify(data,null,1);
   builtHtml=decodeTemplate().replace('/*DATA*/',()=>payload);
 
-  $('#srcname').textContent=fname;
+  const nDays=data.frames.length, L=data.london||{};
+  $('#srcname').textContent = nDays>1
+    ? `${nDays} reports · ${data.frames.map(f=>bShortDay(f.date)).join(' · ')}`
+    : (data.frames[0]?bShortDay(data.frames[0].date):'1 report');
   $('#rdate').textContent=data.meta.date;
   $('#rtime').textContent=data.meta.time?data.meta.time+' snapshot':'';
-  const L=data.london||{};
   $('#stats').innerHTML=`
-    <div class="stat"><div class="v">${data.units.length}</div><div class="l">Units</div></div>
+    <div class="stat"><div class="v">${nDays}</div><div class="l">${nDays>1?'Days · trend':'Day'}</div></div>
     <div class="stat"><div class="v">${L.funded??'—'}</div><div class="l">Funded cots</div></div>
     <div class="stat a"><div class="v">${L.available??'—'}</div><div class="l">Available</div></div>
     <div class="stat"><div class="v">${L.pct!=null?L.pct+'%':'—'}</div><div class="l">Capacity</div></div>`;
@@ -280,7 +306,6 @@ function render(fname,data,warnings){
       +`They'll still appear; ask to add exact coordinates for a permanent fix.`;
   } else { w.style.display='none'; }
 
-  // filename from date
   const d=(data.meta.date||'').replace('Latest report','');
   outName = d ? `London Neonatal Cot State — ${d.replace(/^\w+\s/,'')}.html` : 'London Neonatal Cot State.html';
   $('#dlname').textContent=outName;
@@ -300,10 +325,10 @@ function download(){
 }
 
 const drop=$('#drop');
-$('#file').addEventListener('change',e=>handleFile(e.target.files[0]));
+$('#file').addEventListener('change',e=>handleFiles(e.target.files));
 ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over');}));
 ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();if(ev==='dragleave'&&e.target!==drop)return;drop.classList.remove('over');}));
-drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('over');const f=e.dataTransfer.files[0];handleFile(f);});
+drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('over');handleFiles(e.dataTransfer.files);});
 $('#download').addEventListener('click',download);
 $('#another').addEventListener('click',()=>{$('#file').value='';$('#file').click();});
 </script>

@@ -168,8 +168,12 @@ def extract(xlsx_path):
             'rag': clean(cell(ws, r, 20)),
             'admissions': to_int(cell(ws, r, 22)), 'discharges': to_int(cell(ws, r, 23)),
             'comment': clean(cell(ws, r, 25)),
+            # funded (capacity) is reliable even when a unit doesn't report; fall back to it.
             'funded': fn if fn is not None else to_int(cell(ws, r, 27)),
-            'available': av if av is not None else to_int(cell(ws, r, 28)),
+            # available: ONLY from the reported overall. If the unit didn't submit
+            # ('-- / --'), leave it None (→ treated as stale) rather than trusting the
+            # "Total Available" column, which then just mirrors funded (looks fully empty).
+            'available': av,
         }
         units.append(u)
         buffer.append(u)
@@ -197,54 +201,83 @@ def extract(xlsx_path):
     return data, warnings
 
 
+# Fields that change day to day (stored per frame) vs stable identity/location.
+DYNAMIC = ('status', 'ichdTotal', 'ichdAvail', 'scFunded', 'scAvail', 'overall',
+           'overallPct', 'rag', 'admissions', 'discharges', 'comment', 'funded', 'available')
+STATIC = ('full', 'short', 'level', 'net', 'netAbbr', 'lat', 'lng')
+
+
+def date_key(path):
+    """Sort key by the report DATE in the filename (DD.MM.YYYY); mtime as fallback."""
+    m = re.search(r'(\d{2})\.(\d{2})\.(\d{4})', os.path.basename(path))
+    if m:
+        d, mo, y = map(int, m.groups())
+        try:
+            return (1, datetime.date(y, mo, d).toordinal())
+        except ValueError:
+            pass
+    return (0, os.path.getmtime(path))
+
+
+def build_payload(frames):
+    """frames: list of extract() dicts, oldest→newest. Latest is the map's default day."""
+    latest = frames[-1]
+    static = [{k: u.get(k) for k in STATIC} for u in latest['units']]
+    frame_out = []
+    for data in frames:
+        um = {u['short']: {k: u.get(k) for k in DYNAMIC} for u in data['units']}
+        frame_out.append({'date': data['meta']['date'], 'time': data['meta']['time'],
+                          'london': data['london'], 'units': um})
+    return {'meta': latest['meta'], 'networks': latest['networks'],
+            'london': latest['london'], 'units': static, 'frames': frame_out}
+
+
 def main():
-    args = [a for a in sys.argv[1:]]
-    xlsx = args[0] if len(args) >= 1 else None
+    args = sys.argv[1:]
     out = args[1] if len(args) >= 2 else DEFAULT_OUT
 
-    if not xlsx:
-        candidates = [c for c in glob.glob(os.path.join(HERE, 'Cot State*.xlsx'))
-                      if not os.path.basename(c).startswith('~$')]
-        if not candidates:
+    if len(args) >= 1:
+        files = [args[0]]                      # explicit single file → single day
+    else:
+        files = [c for c in glob.glob(os.path.join(HERE, 'Cot State*.xlsx'))
+                 if not os.path.basename(c).startswith('~$')]
+        if not files:
             sys.exit('No "Cot State*.xlsx" found here. Pass the file path as an argument.')
-        # Pick the latest *report date* from the filename (DD.MM.YYYY), not file mtime —
-        # copying an older file last shouldn't make it win.
-        def date_key(path):
-            m = re.search(r'(\d{2})\.(\d{2})\.(\d{4})', os.path.basename(path))
-            if m:
-                d, mo, y = map(int, m.groups())
-                try:
-                    return (1, datetime.date(y, mo, d).toordinal())
-                except ValueError:
-                    pass
-            return (0, os.path.getmtime(path))
-        candidates.sort(key=date_key, reverse=True)
-        xlsx = candidates[0]
-        if len(candidates) > 1:
-            others = ', '.join(os.path.basename(c) for c in candidates[1:])
-            print(f'(Found {len(candidates)} spreadsheets; using the latest-dated. Others: {others})')
+        files.sort(key=date_key)               # oldest → newest
 
     if not os.path.exists(TEMPLATE):
         sys.exit('template.html is missing — it must sit next to generate.py.')
 
-    print(f'Reading:   {os.path.basename(xlsx)}')
-    data, warnings = extract(xlsx)
+    frames, warnings = [], []
+    for f in files:
+        print(f'Reading:   {os.path.basename(f)}')
+        data, warns = extract(f)
+        frames.append(data)
+        for w in warns:
+            if w not in warnings:
+                warnings.append(w)
 
+    payload_obj = build_payload(frames)
     template = open(TEMPLATE, encoding='utf-8').read()
-    payload = json.dumps(data, indent=1, ensure_ascii=False)
+    payload = json.dumps(payload_obj, indent=1, ensure_ascii=False)
     html = template.replace('/*DATA*/', payload, 1)
     with open(out, 'w', encoding='utf-8') as f:
         f.write(html)
 
-    print(f'Units:     {len(data["units"])}   Networks: {len(data["networks"])}')
-    print(f'Report:    {data["meta"]["date"]} {data["meta"]["time"]}')
-    if data['london']:
-        L = data['london']
+    latest = frames[-1]
+    def short_date(d):
+        p = d['meta']['date'].split()      # e.g. ['Thursday','24','July','2026']
+        return f'{p[1]} {p[2][:3]}' if len(p) >= 3 else d['meta']['date']
+    print(f'Days:      {len(frames)}  ({" · ".join(short_date(d) for d in frames)})')
+    print(f'Units:     {len(latest["units"])}   Networks: {len(latest["networks"])}')
+    print(f'Latest:    {latest["meta"]["date"]} {latest["meta"]["time"]}')
+    if latest['london']:
+        L = latest['london']
         print(f'London:    {L.get("available")}/{L.get("funded")} available ({L.get("pct")}%)')
     if warnings:
         print('\n  WARNING — no map location for these units (placed at London centre):')
         for w in warnings:
-            print(f'    • {w}   → add coordinates to GEO in generate.py')
+            print(f'    • {w}   → add coordinates to geo.json')
     print(f'\nWrote:     {out}')
 
 

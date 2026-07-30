@@ -7,6 +7,12 @@ map (`London Neonatal Cot State.html`) you can email or open on any Mac or Windo
 in the day's spreadsheet, and download the dashboard. Everything runs in your browser; the
 spreadsheet never leaves your computer, and no real cot data is stored in this repository.
 
+The dashboard shows every unit as a teardrop pin (fill = cots available, outline = staffing
+status), with a **Heat** overlay you can switch between *spare capacity* (green) and
+*pressure* (red where units are full). Drop **several days at once** and it also gets a
+**date slider** to time-travel the map plus **availability sparklines** (London-wide and per
+unit).
+
 There are two ways to build it. Most of the time you want the first one.
 
 ---
@@ -14,9 +20,9 @@ There are two ways to build it. Most of the time you want the first one.
 ## 1. The Builder — no install, Mac or Windows  ⭐
 
 **`Cot State Builder.html`** — double-click to open it in any browser, then **drag the new
-`Cot State … .xlsx` onto it** (or click to choose). It reads the spreadsheet on the page,
-shows a live preview, and gives you a **Download dashboard** button. The download is the
-finished `.html` file to send.
+`Cot State … .xlsx` onto it** (or click to choose; select **several** for a trend view). It
+reads the spreadsheets on the page, shows a live preview, and gives you a **Download
+dashboard** button. The download is the finished `.html` file to send.
 
 - No Python, no Terminal, no install — works the same on Mac and Windows.
 - The Builder itself needs **no internet**. (The finished dashboard needs internet only to
@@ -32,10 +38,14 @@ That's it. Everything below is only for changing how it works.
 Same result from the command line:
 
 ```bash
-python3 generate.py                       # auto-picks the newest "Cot State*.xlsx" here
-python3 generate.py "Cot State - 05.08.2026.xlsx"
-python3 generate.py "Cot State - 05.08.2026.xlsx" "Cot State Aug 5.html"
+python3 generate.py                       # uses ALL "Cot State*.xlsx" here → latest day + trend
+python3 generate.py "Cot State - 05.08.2026.xlsx"          # one file → single day, no trend
+python3 generate.py "Cot State - 05.08.2026.xlsx" "Out.html"
 ```
+
+With no arguments it reads **every** `Cot State*.xlsx` in the folder, uses the latest report
+date as the map's default day, and includes the others as the trend history. Pass a single
+file to force a one-day dashboard.
 
 Requires Python 3 with `openpyxl` (`pip install openpyxl`).
 
