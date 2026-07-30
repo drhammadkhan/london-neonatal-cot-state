@@ -152,8 +152,9 @@ function decodeTemplate(){
 }
 
 /* ---- extraction (mirrors generate.py) ---- */
-/* GEO is baked in from geo.json by build_builder.py (single source of truth). */
+/* GEO + SPECIALTIES are baked in from geo.json / specialties.json by build_builder.py. */
 const GEO = /*GEO_JSON*/;
+const SPECIALTIES = /*SPECIALTIES_JSON*/;
 const LONDON_CENTRE=[51.5074,-0.1278];
 const VALID_LEVELS=new Set(['NICU','LNU','SCBU']);
 const NET_CANON={
@@ -216,7 +217,7 @@ function extract(wb){
     if(!full||!VALID_LEVELS.has((level||'').toUpperCase())) continue;
     const [av,fn]=parsePair(row[16]); const [icav,ictot]=parsePair(row[8]); const [scav,sctot]=parsePair(row[13]);
     let ll=GEO[short]; if(!ll){warnings.push(short); ll=LONDON_CENTRE;}
-    const u={full,short,level,status:clean(row[4]),net:null,netAbbr:null,lat:ll[0],lng:ll[1],
+    const u={full,short,level,specialties:SPECIALTIES[short]||[],status:clean(row[4]),net:null,netAbbr:null,lat:ll[0],lng:ll[1],
       ichdTotal:ictot,ichdAvail:icav,scFunded:sctot,scAvail:scav,
       overall:clean(row[16]),overallPct:toFloat(row[17])||0,rag:clean(row[19]),
       admissions:toInt(row[21]),discharges:toInt(row[22]),comment:clean(row[24]),
@@ -246,7 +247,7 @@ function clearErr(){ $('#err').classList.remove('show'); }
 
 /* ---- multi-day assembly (mirrors generate.py build_payload) ---- */
 const _months={january:0,february:1,march:2,april:3,may:4,june:5,july:6,august:7,september:8,october:9,november:10,december:11};
-const _STATIC=['full','short','level','net','netAbbr','lat','lng'];
+const _STATIC=['full','short','level','specialties','net','netAbbr','lat','lng'];
 const _DYN=['status','ichdTotal','ichdAvail','scFunded','scAvail','overall','overallPct','rag','admissions','discharges','comment','funded','available'];
 function bShortDay(s){const p=(s||'').split(' ');return p.length>=3?`${p[1]} ${p[2].slice(0,3)}`:s;}
 function dateKey(entry){                          // sort by report date; filename first, then meta

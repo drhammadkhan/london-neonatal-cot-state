@@ -27,6 +27,7 @@ DEFAULT_OUT = os.path.join(HERE, 'London Neonatal Cot State.html')
 # --- Unit map locations. Single source of truth = geo.json (shared with the Builder).
 #     Add new units there, not here.
 GEO_PATH = os.path.join(HERE, 'geo.json')
+SPEC_PATH = os.path.join(HERE, 'specialties.json')
 
 
 def load_geo():
@@ -37,7 +38,16 @@ def load_geo():
     return {k: tuple(v) for k, v in raw.items() if not k.startswith('_')}
 
 
+def load_spec():
+    if not os.path.exists(SPEC_PATH):
+        return {}
+    with open(SPEC_PATH, encoding='utf-8') as f:
+        raw = json.load(f)
+    return {k: v for k, v in raw.items() if not k.startswith('_')}
+
+
 GEO = load_geo()
+SPEC = load_spec()
 LONDON_CENTRE = (51.5074, -0.1278)
 VALID_LEVELS = {'NICU', 'LNU', 'SCBU'}
 
@@ -160,6 +170,7 @@ def extract(xlsx_path):
 
         u = {
             'full': full, 'short': short, 'level': level,
+            'specialties': SPEC.get(short, []),
             'status': clean(cell(ws, r, 5)), 'net': None, 'netAbbr': None,
             'lat': lat_lng[0], 'lng': lat_lng[1],
             'ichdTotal': ic_tot, 'ichdAvail': ic_av,
@@ -204,7 +215,7 @@ def extract(xlsx_path):
 # Fields that change day to day (stored per frame) vs stable identity/location.
 DYNAMIC = ('status', 'ichdTotal', 'ichdAvail', 'scFunded', 'scAvail', 'overall',
            'overallPct', 'rag', 'admissions', 'discharges', 'comment', 'funded', 'available')
-STATIC = ('full', 'short', 'level', 'net', 'netAbbr', 'lat', 'lng')
+STATIC = ('full', 'short', 'level', 'specialties', 'net', 'netAbbr', 'lat', 'lng')
 
 
 def date_key(path):

@@ -21,16 +21,19 @@ def main():
         sys.exit("SheetJS contains a </script> — cannot inline safely.")
     tpl_b64 = base64.b64encode(read("template.html").encode("utf-8")).decode("ascii")
 
-    # geo.json is the single source of truth for unit locations — bake it in.
+    # geo.json + specialties.json are the sources of truth for unit metadata — bake them in.
     geo = {k: v for k, v in json.loads(read("geo.json")).items() if not k.startswith("_")}
     geo_json = json.dumps(geo, ensure_ascii=False)
+    spec = {k: v for k, v in json.loads(read("specialties.json")).items() if not k.startswith("_")}
+    spec_json = json.dumps(spec, ensure_ascii=False)
 
     src = read("builder_src.html")
-    for marker in ("/*SHEETJS*/", "/*TEMPLATE_B64*/", "/*GEO_JSON*/"):
+    for marker in ("/*SHEETJS*/", "/*TEMPLATE_B64*/", "/*GEO_JSON*/", "/*SPECIALTIES_JSON*/"):
         if marker not in src:
             sys.exit(f"Placeholder {marker} missing from builder_src.html")
 
     out = (src.replace("/*GEO_JSON*/", geo_json, 1)
+              .replace("/*SPECIALTIES_JSON*/", spec_json, 1)
               .replace("/*SHEETJS*/", sheetjs, 1)
               .replace("/*TEMPLATE_B64*/", tpl_b64, 1))
     # Friendly name for sending, plus index.html so GitHub Pages serves it at the site root.
