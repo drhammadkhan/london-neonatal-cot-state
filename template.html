@@ -288,7 +288,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--ink);overflow:hidd
   <div id="heat-leg" style="display:none">
     <div class="divider"></div>
     <div class="legend-t">Capacity surface</div>
-    <div class="gradbar" style="background:linear-gradient(90deg,#e5352b,#f5b301,#22c07e)"></div>
+    <div class="gradbar" style="background:linear-gradient(90deg,#d62828,#f0782a,#f4bc14,#96cd5f,#22c07e)"></div>
     <div class="legscale"><span>full · under pressure</span><span>free cots</span></div>
   </div>
 </div>
@@ -454,11 +454,15 @@ function declutter(){
 /* ---------- spare-capacity heat ---------- */
 /* ---------- capacity surface: one diverging red↔green heat ---------- */
 let HEATON=false, capLayer=null;
-function diverge(t){                          // 0 = full (red) · 0.5 = amber · 1 = free (green)
-  t=Math.max(0,Math.min(1,t));
-  const red=[229,53,43], amb=[245,179,1], grn=[34,192,126];
-  const mix=(a,b,k)=>a.map((v,i)=>Math.round(v+(b[i]-v)*k));
-  return t<0.5?mix(red,amb,t/0.5):mix(amb,grn,(t-0.5)/0.5);
+function diverge(rate){                       // availability rate → colour, calibrated to real occupancy
+  // deep red only near-full; amber ~32% avail (typical); green for genuinely roomy units
+  const stops=[[0,[214,40,40]],[0.16,[240,120,35]],[0.32,[244,188,20]],[0.5,[150,205,95]],[0.75,[34,192,126]]];
+  rate=Math.max(0,Math.min(1,rate));
+  for(let i=0;i<stops.length-1;i++){
+    const [x0,c0]=stops[i],[x1,c1]=stops[i+1];
+    if(rate<=x1){const k=(rate-x0)/(x1-x0);return c0.map((v,j)=>Math.round(v+(c1[j]-v)*k));}
+  }
+  return stops[stops.length-1][1];
 }
 const CapacitySurface=L.Layer.extend({
   onAdd(map){
@@ -488,7 +492,7 @@ const CapacitySurface=L.Layer.extend({
       pts.push({x:p.x,y:p.y,r:Math.max(0,Math.min(1,u.available/u.funded))});
     });
     if(!pts.length) return;
-    const R=100, STEP=8, MAXA=0.62;            // influence radius (px), grid step, max opacity
+    const R=86, STEP=8, MAXA=0.5;              // influence radius (px), grid step, max opacity
     const gw=Math.ceil(size.x/STEP)+1, gh=Math.ceil(size.y/STEP)+1;
     const tmp=document.createElement('canvas'); tmp.width=gw; tmp.height=gh;
     const tctx=tmp.getContext('2d'), img=tctx.createImageData(gw,gh), d=img.data;
