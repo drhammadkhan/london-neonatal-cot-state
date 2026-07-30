@@ -1,0 +1,12 @@
+# --- Real cot-state DATA — never publish ---
+# The daily Excel exports (contain actual per-unit cot numbers)
+Cot State*.xlsx
+~$*.xlsx
+# Generated dashboards (data is baked into these)
+London Neonatal Cot State.html
+London Neonatal Cot State*.html
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp

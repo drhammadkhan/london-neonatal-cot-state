@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cot State Dashboard Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b0e13; --panel:#12161e; --panel-2:rgba(255,255,255,.03);
+  --border:rgba(255,255,255,.09); --border-strong:rgba(255,255,255,.16);
+  --ink:#eef2f6; --ink-2:#aeb9c6; --ink-3:#77828f;
+  --accent:#2dd4bf; --accent-dim:rgba(45,212,191,.14);
+  --red:#f2555a; --amber:#f5a524; --green:#37d399;
+  --serif:'Fraunces',Georgia,serif; --sans:'Instrument Sans',system-ui,sans-serif; --mono:'IBM Plex Mono',monospace;
+  --shadow:0 24px 60px -12px rgba(0,0,0,.55), 0 8px 24px -8px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%}
+body{font-family:var(--sans);color:var(--ink);-webkit-font-smoothing:antialiased;
+  background:
+    radial-gradient(1100px 620px at 82% -8%, rgba(45,212,191,.10), transparent 60%),
+    radial-gradient(900px 560px at 8% 108%, rgba(96,165,250,.09), transparent 60%),
+    var(--bg);
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:40px 20px 60px}
+
+.wrap{width:100%;max-width:760px;animation:rise .6s cubic-bezier(.16,1,.3,1) both}
+.brand{display:flex;align-items:center;gap:14px;margin-bottom:8px}
+.mark{width:44px;height:44px;border-radius:13px;flex:0 0 auto;display:grid;place-items:center;background:linear-gradient(145deg,#132b2a,#0e1a22);border:1px solid var(--border-strong)}
+.mark svg{width:25px;height:25px}
+h1{font-family:var(--serif);font-weight:600;font-size:28px;letter-spacing:-.02em;line-height:1.05}
+.brand .sub{font-size:12px;color:var(--ink-3);letter-spacing:.06em;text-transform:uppercase;margin-top:4px;font-weight:600}
+.lead{color:var(--ink-2);font-size:15px;line-height:1.55;margin:16px 0 26px;max-width:60ch}
+.lead b{color:var(--ink);font-weight:600}
+
+.drop{position:relative;border:1.5px dashed var(--border-strong);border-radius:20px;background:var(--panel-2);
+  padding:52px 30px;text-align:center;cursor:pointer;transition:.2s;overflow:hidden}
+.drop:hover{border-color:var(--accent);background:var(--accent-dim)}
+.drop.over{border-color:var(--accent);background:var(--accent-dim);transform:scale(1.008)}
+.drop .ic{width:60px;height:60px;margin:0 auto 16px;border-radius:16px;display:grid;place-items:center;
+  background:rgba(45,212,191,.12);border:1px solid rgba(45,212,191,.25)}
+.drop .ic svg{width:30px;height:30px;color:var(--accent)}
+.drop .big{font-family:var(--serif);font-size:20px;font-weight:600;letter-spacing:-.01em}
+.drop .small{color:var(--ink-3);font-size:13px;margin-top:7px}
+.drop .small b{color:var(--ink-2);font-weight:600}
+#file{display:none}
+
+.err{margin-top:18px;border:1px solid rgba(242,85,90,.4);background:rgba(242,85,90,.10);color:#ffd7d8;
+  border-radius:14px;padding:14px 16px;font-size:13.5px;line-height:1.5;display:none}
+.err.show{display:block;animation:rise .4s both}
+
+.result{margin-top:22px;display:none}
+.result.show{display:block;animation:rise .5s both}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);overflow:hidden}
+.rhead{padding:18px 20px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.ok{width:34px;height:34px;border-radius:10px;flex:0 0 auto;display:grid;place-items:center;background:rgba(55,211,153,.15);border:1px solid rgba(55,211,153,.3)}
+.ok svg{width:19px;height:19px;color:var(--green)}
+.rhead .t{font-family:var(--serif);font-size:18px;font-weight:600}
+.rhead .fn{font-size:12px;color:var(--ink-3);font-family:var(--mono);margin-top:2px}
+.rhead .when{margin-left:auto;text-align:right}
+.rhead .when .d{font-size:12.5px;color:var(--ink-2);font-weight:600}
+.rhead .when .h{font-size:11px;color:var(--ink-3);font-family:var(--mono)}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border-bottom:1px solid var(--border)}
+.stat{background:var(--panel);padding:15px 16px}
+.stat .v{font-family:var(--serif);font-size:27px;font-weight:600;letter-spacing:-.02em;line-height:1}
+.stat .l{font-size:10.5px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.05em;margin-top:6px;font-weight:600}
+.stat.a .v{color:var(--green)}
+
+.warns{padding:14px 20px;border-bottom:1px solid var(--border);background:rgba(245,165,36,.06);font-size:13px;color:var(--amber);line-height:1.5}
+.warns b{color:#ffd9a0}
+.warns code{font-family:var(--mono);font-size:12px;background:rgba(0,0,0,.3);padding:1px 6px;border-radius:5px;color:var(--ink)}
+
+.actions{padding:16px 20px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.btn{font-family:var(--sans);font-weight:600;font-size:14px;border-radius:12px;padding:12px 20px;cursor:pointer;border:1px solid var(--border);transition:.15s;display:inline-flex;align-items:center;gap:9px}
+.btn svg{width:16px;height:16px}
+.btn.primary{background:var(--accent);color:#062420;border-color:transparent}
+.btn.primary:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.btn.ghost{background:transparent;color:var(--ink-2)}
+.btn.ghost:hover{color:var(--ink);border-color:var(--border-strong)}
+.actions .hint{margin-left:auto;font-size:12px;color:var(--ink-3)}
+
+.preview{border-top:1px solid var(--border);background:#0a0d12}
+.preview .pbar{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--border);font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.preview .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(55,211,153,.5);animation:beat 2.4s infinite}
+.preview iframe{width:100%;height:460px;border:0;display:block;background:#e7ebef}
+
+.foot{margin-top:26px;font-size:12px;color:var(--ink-3);line-height:1.6;text-align:center}
+.foot b{color:var(--ink-2)}
+
+@keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes beat{0%{box-shadow:0 0 0 0 rgba(55,211,153,.5)}70%{box-shadow:0 0 0 6px rgba(55,211,153,0)}100%{box-shadow:0 0 0 0 rgba(55,211,153,0)}}
+@media(max-width:560px){.stats{grid-template-columns:repeat(2,1fr)}.rhead .when{margin-left:0;text-align:left;width:100%}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <div class="mark"><svg viewBox="0 0 24 24" fill="none"><path d="M12 21s-7-4.35-7-10a7 7 0 0 1 14 0c0 5.65-7 10-7 10Z" stroke="#37d399" stroke-width="1.5"/><path d="M12 7v6M9 10h6" stroke="#37d399" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+    <div><h1>Cot State Builder</h1><div class="sub">London Neonatal Network</div></div>
+  </div>
+  <p class="lead">Drop the daily <b>Cot State</b> spreadsheet below to build the interactive map dashboard.
+  Everything runs on this page — <b>no internet, no install, no Terminal</b> — so it works the same on Mac or Windows.
+  You'll get a single <b>.html</b> file to send.</p>
+
+  <label class="drop" id="drop" for="file">
+    <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 15V3m0 0-4 4m4-4 4 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 15v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4" stroke-linecap="round"/></svg></div>
+    <div class="big">Drop the Cot State <span style="color:var(--accent)">.xlsx</span> here</div>
+    <div class="small">or <b>click to choose a file</b> · stays entirely on your computer</div>
+    <input type="file" id="file" accept=".xlsx,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+  </label>
+
+  <div class="err" id="err"></div>
+
+  <div class="result" id="result">
+    <div class="card">
+      <div class="rhead">
+        <div class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 13 4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div><div class="t">Dashboard ready</div><div class="fn" id="srcname">—</div></div>
+        <div class="when"><div class="d" id="rdate">—</div><div class="h" id="rtime">—</div></div>
+      </div>
+      <div class="stats" id="stats"></div>
+      <div class="warns" id="warns" style="display:none"></div>
+      <div class="actions">
+        <button class="btn primary" id="download"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0-4-4m4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke-linecap="round"/></svg>Download dashboard</button>
+        <button class="btn ghost" id="another">Choose another file</button>
+        <span class="hint" id="dlname"></span>
+      </div>
+      <div class="preview">
+        <div class="pbar"><span class="dot"></span> Live preview</div>
+        <iframe id="frame" title="Dashboard preview"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    Built for the London Neonatal Network daily cot state · Marker fill = cots available, ring = staffing status.<br>
+    <b>Tip:</b> the finished dashboard needs internet to draw the map; this builder does not.
+  </div>
+</div>
+
+<script>/*SHEETJS*/</script>
+<script>
+const TEMPLATE_B64 = "/*TEMPLATE_B64*/";
+function decodeTemplate(){
+  const bin = atob(TEMPLATE_B64);
+  const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+  return new TextDecoder('utf-8').decode(bytes);
+}
+
+/* ---- extraction (mirrors generate.py) ---- */
+/* GEO is baked in from geo.json by build_builder.py (single source of truth). */
+const GEO = /*GEO_JSON*/;
+const LONDON_CENTRE=[51.5074,-0.1278];
+const VALID_LEVELS=new Set(['NICU','LNU','SCBU']);
+const NET_CANON={
+ 'north central london':['North Central London','NCL'],
+ 'north east london':['North East London','NEL'],
+ 'north west london':['North West London','NWL'],
+ 'north west':['North West London','NWL'],
+ 'south east london':['South East London','SEL'],
+ 'south west london':['South West London','SWL'],
+};
+const WD=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const MO=['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+const parsePair=v=>{ if(v==null) return [null,null];
+  const m=String(v).match(/-?\d+/g); return (m&&m.length>=2)?[parseInt(m[0],10),parseInt(m[1],10)]:[null,null]; };
+const toInt=v=>{const n=parseFloat(v);return isNaN(n)?null:Math.round(n);};
+const toFloat=v=>{const n=parseFloat(v);return isNaN(n)?null:Math.round(n*1e4)/1e4;};
+const clean=v=>{if(v==null)return null;const s=String(v).trim();return (s&&s!=='--'&&s!=='-- / --')?s:null;};
+
+function findSerial(ws){
+  const ref=XLSX.utils.decode_range(ws['!ref']);
+  for(let R=ref.s.r;R<=Math.min(ref.s.r+6,ref.e.r);R++){
+    for(let C=ref.s.c;C<=ref.e.c;C++){
+      const cell=ws[XLSX.utils.encode_cell({r:R,c:C})];
+      // an Excel date serial (>40000 ≈ year 2009+); no other header cell is this large
+      if(cell&&cell.t==='n'&&typeof cell.v==='number'&&cell.v>40000&&cell.v<80000)
+        return cell.v;
+    }
+  }
+  return null;
+}
+
+function extract(wb){
+  const ws=wb.Sheets['Cotstate'];
+  if(!ws) throw new Error('This workbook has no "Cotstate" sheet — is it the right export?');
+  const serial=findSerial(ws);
+  const ref=XLSX.utils.decode_range(ws['!ref']); ref.s.c=0; ref.s.r=0; ws['!ref']=XLSX.utils.encode_range(ref);
+  const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null,blankrows:true,raw:true});
+
+  const units=[],networks=[],warnings=[]; let buffer=[],london=null;
+  for(const row of rows){
+    const full=clean(row[0]), short=clean(row[2]);
+    if(!short) continue;
+    const key=short.toLowerCase().trim();
+    if(key==='london'){
+      const [av,fn]=parsePair(row[16]); const [icav,ictot]=parsePair(row[8]); const [scav,sctot]=parsePair(row[13]);
+      const pct=toFloat(row[17]);
+      london={funded:fn,available:av,occupied:(fn!=null&&av!=null)?fn-av:null,
+        pct:pct!=null?Math.round(pct*100):null,ichdAvail:icav,ichdTotal:ictot,scAvail:scav,scTotal:sctot};
+      continue;
+    }
+    if(NET_CANON[key]&&!full){
+      const [name,abbr]=NET_CANON[key]; const [av,fn]=parsePair(row[16]); const pct=toFloat(row[17]);
+      buffer.forEach(u=>{u.net=name;u.netAbbr=abbr;});
+      const [icav,ictot]=parsePair(row[8]); const [scav,sctot]=parsePair(row[13]);
+      networks.push({name,abbr,funded:fn,available:av,pct,ichdAvail:icav,ichdTotal:ictot,scAvail:scav,scFunded:sctot});
+      buffer=[]; continue;
+    }
+    const level=clean(row[3]);
+    if(!full||!VALID_LEVELS.has((level||'').toUpperCase())) continue;
+    const [av,fn]=parsePair(row[16]); const [icav,ictot]=parsePair(row[8]); const [scav,sctot]=parsePair(row[13]);
+    let ll=GEO[short]; if(!ll){warnings.push(short); ll=LONDON_CENTRE;}
+    const u={full,short,level,status:clean(row[4]),net:null,netAbbr:null,lat:ll[0],lng:ll[1],
+      ichdTotal:ictot,ichdAvail:icav,scFunded:sctot,scAvail:scav,
+      overall:clean(row[16]),overallPct:toFloat(row[17])||0,rag:clean(row[19]),
+      admissions:toInt(row[21]),discharges:toInt(row[22]),comment:clean(row[24]),
+      funded:fn!=null?fn:toInt(row[26]),available:av!=null?av:toInt(row[27])};
+    units.push(u); buffer.push(u);
+  }
+
+  let date_str='Latest report', time_str='';
+  if(serial!=null){
+    try{ date_str=XLSX.SSF.format('dddd d mmmm yyyy',serial); time_str=XLSX.SSF.format('hh:mm',serial); }catch(e){}
+  }
+  if(!units.length) throw new Error('No neonatal units (NICU/LNU/SCBU) were found in the "Cotstate" sheet.');
+
+  return {data:{
+    meta:{title:'London Neonatal Network',date:date_str,time:time_str,
+      note:'Anonymised data — from daily Badgernet Cot Bureau submissions.',
+      source:'London Neonatal Network · londonneonatalnetwork.org.uk'},
+    london:london||{},networks,units}, warnings};
+}
+
+/* ---- UI wiring ---- */
+const $=s=>document.querySelector(s);
+let builtHtml=null, outName='London Neonatal Cot State.html';
+
+function showErr(msg){ const e=$('#err'); e.textContent='⚠  '+msg; e.classList.add('show'); $('#result').classList.remove('show'); }
+function clearErr(){ $('#err').classList.remove('show'); }
+
+function handleFile(file){
+  clearErr();
+  if(!file) return;
+  if(!/\.xls[xm]$/i.test(file.name)){ showErr('Please choose an Excel .xlsx file.'); return; }
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      const {data,warnings}=extract(wb);
+      render(file.name,data,warnings);
+    }catch(err){ showErr(err.message||String(err)); console.error(err); }
+  };
+  reader.onerror=()=>showErr('Could not read that file.');
+  reader.readAsArrayBuffer(file);
+}
+
+function render(fname,data,warnings){
+  const payload=JSON.stringify(data,null,1);
+  builtHtml=decodeTemplate().replace('/*DATA*/',()=>payload);
+
+  $('#srcname').textContent=fname;
+  $('#rdate').textContent=data.meta.date;
+  $('#rtime').textContent=data.meta.time?data.meta.time+' snapshot':'';
+  const L=data.london||{};
+  $('#stats').innerHTML=`
+    <div class="stat"><div class="v">${data.units.length}</div><div class="l">Units</div></div>
+    <div class="stat"><div class="v">${L.funded??'—'}</div><div class="l">Funded cots</div></div>
+    <div class="stat a"><div class="v">${L.available??'—'}</div><div class="l">Available</div></div>
+    <div class="stat"><div class="v">${L.pct!=null?L.pct+'%':'—'}</div><div class="l">Capacity</div></div>`;
+
+  const w=$('#warns');
+  if(warnings.length){
+    w.style.display='block';
+    w.innerHTML=`<b>Note:</b> no saved map location for ${warnings.map(x=>`<code>${x}</code>`).join(', ')} — placed at central London. `
+      +`They'll still appear; ask to add exact coordinates for a permanent fix.`;
+  } else { w.style.display='none'; }
+
+  // filename from date
+  const d=(data.meta.date||'').replace('Latest report','');
+  outName = d ? `London Neonatal Cot State — ${d.replace(/^\w+\s/,'')}.html` : 'London Neonatal Cot State.html';
+  $('#dlname').textContent=outName;
+
+  $('#frame').srcdoc=builtHtml;
+  $('#result').classList.add('show');
+  $('#result').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function download(){
+  if(!builtHtml) return;
+  const blob=new Blob([builtHtml],{type:'text/html;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download=outName;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},1000);
+}
+
+const drop=$('#drop');
+$('#file').addEventListener('change',e=>handleFile(e.target.files[0]));
+['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over');}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();if(ev==='dragleave'&&e.target!==drop)return;drop.classList.remove('over');}));
+drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('over');const f=e.dataTransfer.files[0];handleFile(f);});
+$('#download').addEventListener('click',download);
+$('#another').addEventListener('click',()=>{$('#file').value='';$('#file').click();});
+</script>
+</body>
+</html>

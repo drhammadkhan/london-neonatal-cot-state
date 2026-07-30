@@ -1,0 +1,35 @@
+{
+  "_comment": "Single source of truth for unit map locations: \"short name\": [lat, lng]. Add new units here. generate.py reads this at runtime; build_builder.py bakes it into 'Cot State Builder.html'. Keys must match the unit's short name in the Cotstate sheet (column C).",
+
+  "Great Ormond Street": [51.5222, -0.1206],
+  "University College Hospital": [51.5241, -0.1373],
+  "Barnet": [51.6512, -0.2100],
+  "North Middlesex": [51.6157, -0.0686],
+  "Whittington": [51.5654, -0.1387],
+  "Royal Free": [51.5535, -0.1650],
+
+  "Homerton": [51.5498, -0.0450],
+  "The Royal London": [51.5190, -0.0590],
+  "Newham": [51.5230, 0.0350],
+  "Queen's, Romford": [51.5686, 0.1780],
+  "Whipps Cross": [51.5790, 0.0020],
+
+  "Chelsea & Westminster": [51.4840, -0.1815],
+  "Queen Charlotte's": [51.5155, -0.2360],
+  "Hillingdon": [51.5250, -0.4530],
+  "Northwick Park": [51.5760, -0.3200],
+  "St Mary's": [51.5170, -0.1735],
+  "West Middlesex": [51.4790, -0.3300],
+
+  "Evelina (St Thomas')": [51.4985, -0.1180],
+  "Kings College": [51.4685, -0.0940],
+  "Queen Elizabeth, Woolwich": [51.4900, 0.0630],
+  "Lewisham": [51.4560, -0.0170],
+  "PRUH": [51.3600, 0.0870],
+
+  "St George's": [51.4270, -0.1750],
+  "Croydon": [51.3900, -0.1050],
+  "Kingston": [51.4155, -0.2830],
+  "St Helier": [51.3820, -0.1930],
+  "Epsom": [51.3230, -0.2560]
+}
