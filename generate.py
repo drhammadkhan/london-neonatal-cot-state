@@ -203,12 +203,26 @@ def main():
     out = args[1] if len(args) >= 2 else DEFAULT_OUT
 
     if not xlsx:
-        candidates = sorted(glob.glob(os.path.join(HERE, 'Cot State*.xlsx')),
-                            key=os.path.getmtime, reverse=True)
-        candidates = [c for c in candidates if not os.path.basename(c).startswith('~$')]
+        candidates = [c for c in glob.glob(os.path.join(HERE, 'Cot State*.xlsx'))
+                      if not os.path.basename(c).startswith('~$')]
         if not candidates:
             sys.exit('No "Cot State*.xlsx" found here. Pass the file path as an argument.')
+        # Pick the latest *report date* from the filename (DD.MM.YYYY), not file mtime —
+        # copying an older file last shouldn't make it win.
+        def date_key(path):
+            m = re.search(r'(\d{2})\.(\d{2})\.(\d{4})', os.path.basename(path))
+            if m:
+                d, mo, y = map(int, m.groups())
+                try:
+                    return (1, datetime.date(y, mo, d).toordinal())
+                except ValueError:
+                    pass
+            return (0, os.path.getmtime(path))
+        candidates.sort(key=date_key, reverse=True)
         xlsx = candidates[0]
+        if len(candidates) > 1:
+            others = ', '.join(os.path.basename(c) for c in candidates[1:])
+            print(f'(Found {len(candidates)} spreadsheets; using the latest-dated. Others: {others})')
 
     if not os.path.exists(TEMPLATE):
         sys.exit('template.html is missing — it must sit next to generate.py.')

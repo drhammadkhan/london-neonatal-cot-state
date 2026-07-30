@@ -252,7 +252,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--ink);overflow:hidd
   <div id="heat-leg" style="display:none">
     <div class="divider"></div>
     <div class="legend-t">Spare-capacity heat</div>
-    <div class="gradbar" style="background:linear-gradient(90deg,#facc7a,#7bc878,#37d399)"></div>
+    <div class="gradbar" style="background:linear-gradient(90deg,#ffd166,#7bd88a,#0fae74)"></div>
     <div class="legscale"><span>less free</span><span>more free cots nearby</span></div>
   </div>
 </div>
@@ -373,9 +373,9 @@ const heatOK=(typeof L.heatLayer==='function');
 function buildHeat(){
   if(heatLayer){map.removeLayer(heatLayer);heatLayer=null;}
   const pts=DATA.units.filter(u=>passes(u)&&!isStale(u)&&u.available>0)
-    .map(u=>[u.lat,u.lng,Math.min(1,u.available/12)]);
-  heatLayer=L.heatLayer(pts,{radius:48,blur:34,minOpacity:.18,max:1,
-    gradient:{0.0:'rgba(55,211,153,0)',0.25:'#f6c877',0.6:'#7bc878',1.0:'#37d399'}});
+    .map(u=>[u.lat,u.lng,Math.min(1,u.available/8)]);
+  heatLayer=L.heatLayer(pts,{radius:62,blur:26,minOpacity:.42,max:0.62,
+    gradient:{0.0:'rgba(45,212,191,0)',0.18:'#ffd166',0.45:'#7bd88a',0.7:'#2fc47e',1.0:'#0fae74'}});
 }
 function toggleHeat(){
   if(!heatOK) return;
